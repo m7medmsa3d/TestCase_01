@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql_backend_container
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Password123!
+      MYSQL_DATABASE: TestCaseDb
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+ 
+  testcase_01:
+    image: ${DOCKER_REGISTRY-}testcase01
+    build:
+      context: ..                      
+      dockerfile: TestCase_01/Dockerfile 
+    ports:
+      - "44376:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=mysql-db;Port=3306;Database=TestCaseDb;Uid=root;Pwd=Password123!;
+    depends_on:
+      - mysql-db
+
+volumes:
+  mysql_data:
