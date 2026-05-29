@@ -8,7 +8,7 @@ It handles the complete lifecycle of test cases, from generation logic to multi-
 ## 🛠️ Tech Stack & Architecture
 
 - **Framework:** ASP.NET Core 9.0 (Web API) - *Latest Stable & High-Performance Release*
-- **Database ORM:** Entity Framework Core (SQL Server)
+- **Database ORM:** Entity Framework Core (MySQL)
 - **Design Patterns:** Repository Pattern, N-Tier Architecture, Data Transfer Objects (DTO) Isolation
 - **Containerization:** Docker & Docker Hub Integration
 - **API Documentation:** Swagger / OpenAPI Integration
