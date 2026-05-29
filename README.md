@@ -38,6 +38,19 @@ Solution 'TestCase_01'
     ├── 📄 TestCaseDTO.cs        # Main Data Representation Template
     ├── 📄 TestCaseRequestDTO.cs # Data Contract for Inbound Requests
     └── 📄 TestCaseResponseDTO.cs# Data Contract for Outbound Responses
+
+## 🔗 The service exposes the following RESTful endpoints for seamless integration with other microservices:
+
+| HTTP Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **POST** | `/api/TestCase/create` | Generates & records a new test case scenario. |
+| **GET** | `/api/TestCase/{testcaseid}` | Fetches a single test case detail by its unique ID. |
+| **GET** | `/api/TestCase/by-project/{projectId}` | Retrieves all test cases associated with a specific Project. |
+| **GET** | `/api/TestCase/by-requirement/{requirementId}` | Retrieves all test cases associated with a specific Requirement. |
+| **DELETE** | `/api/TestCase/by-requirement/{requirementId}` | Removes all test cases assigned to a specific Requirement. |
+| **DELETE** | `/api/TestCase/delete-testcase/{testcaseid}` | Safely deletes a specific testcase via its ID. |
+
+
 🐳 Docker Deployment & Containerization
 The service is fully containerized and hosted publicly on Docker Hub to facilitate rapid CI/CD deployment pipelines.
 
