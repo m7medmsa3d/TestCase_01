@@ -63,6 +63,8 @@ namespace TestCase_01
 
             app.UseCors("AllowAll");
 
+            app.UseAuthentication();
+
             app.UseAuthorization();
 
 
