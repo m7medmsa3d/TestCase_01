@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -11,6 +12,7 @@ namespace TestCase_01.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class TestCaseController : ControllerBase
     {
         private readonly ITestCaseService _testCaseService;
