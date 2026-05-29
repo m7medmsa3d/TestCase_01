@@ -25,28 +25,42 @@ namespace TestCase_01_DataAccess.Service
             _logger = logger;
         }
 
-        public async Task CreateTestCaseAsync(TestCaseDTO testCaseDto, long projectId, long requirementId)
+        public async Task CreateTestCaseAsync(TestCaseRequestDTO testCaseRequestDto)
         {
-            if (testCaseDto == null)
+           
+            if (testCaseRequestDto == null)
             {
                 _logger.LogWarning("CreateTestCaseAsync received a null TestCaseDTO.");
-                throw new ArgumentNullException(nameof(testCaseDto));
+                throw new ArgumentNullException(nameof(testCaseRequestDto));
             }
 
-            _logger.LogInformation("Mapping and creating TestCase for Project: {ProjectId}, Requirement: {RequirementId}", projectId, requirementId);
+            _logger.LogInformation("Mapping and creating Batch TestCases for Project: {ProjectId}, Requirement: {RequirementId}",
+                testCaseRequestDto.ProjectId, testCaseRequestDto.RequirementId);
 
             try
             {
-              
-                var testCase = _mapper.Map<TestCase>(testCaseDto);
+                var testCasesList = _mapper.Map<List<TestCase>>(testCaseRequestDto.Testcases);
 
                
-                testCase.ProjectId = projectId;
-                testCase.RequirementId = requirementId;
-                testCase.Deleted = false;
+                foreach (var testCase in testCasesList)
+                {
+                    testCase.ProjectId = testCaseRequestDto.ProjectId;
+                    testCase.RequirementId = testCaseRequestDto.RequirementId;
+                    testCase.Deleted = false; 
+                }
 
-                await _unitOfWork.testCaseRepository.CreateAsync(testCase);
-                _logger.LogInformation("TestCase successfully saved to DB.");
+               
+                if (testCasesList.Any())
+                {
+                    foreach (var testCase in testCasesList)
+                    {
+                            await _unitOfWork.testCaseRepository.CreateAsync(testCase);
+                    }
+
+                     await _unitOfWork.testCaseRepository.SaveAsync();
+                }
+
+                _logger.LogInformation("{Count} TestCases successfully saved to DB.", testCasesList.Count);
             }
             catch (Exception ex)
             {
@@ -128,5 +142,37 @@ namespace TestCase_01_DataAccess.Service
                 _logger.LogInformation("No active TestCases found to delete for Requirement ID: {RequirementId}", requirementId);
             }
         }
+
+        public async Task DeleteByTestCaseAsync(long testcaseid)
+        {
+            _logger.LogInformation("Attempting to soft delete TestCase with ID: {TestCaseId}", testcaseid);
+
+            try
+            {
+              
+                var testCase = await _unitOfWork.testCaseRepository.GetAsync(t => t.Id == testcaseid);
+
+               
+                if (testCase == null)
+                {
+                    _logger.LogWarning("TestCase with ID: {TestCaseId} was not found for deletion.", testcaseid);
+                    throw new KeyNotFoundException($"TestCase with ID {testcaseid} not found.");
+                }
+
+               
+                testCase.Deleted = true;
+
+                
+                await _unitOfWork.testCaseRepository.SaveAsync();
+
+                _logger.LogInformation("TestCase with ID: {TestCaseId} successfully soft-deleted.", testcaseid);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting TestCase with ID: {TestCaseId}", testcaseid);
+                throw;
+            }
+        }
+
     }
 }

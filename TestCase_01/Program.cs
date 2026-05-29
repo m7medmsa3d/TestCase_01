@@ -37,6 +37,13 @@ namespace TestCase_01
             builder.Services.AddScoped<ITestCaseService, TestCaseService>();
 
             builder.Services.AddAutoMapper(typeof(MappingConfig));
+            builder.Services.AddCors(options => {
+                options.AddPolicy("AllowAll", policy => {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+                });
+            });
 
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -53,6 +60,8 @@ namespace TestCase_01
             }
 
             app.UseHttpsRedirection();
+
+            app.UseCors("AllowAll");
 
             app.UseAuthorization();
 

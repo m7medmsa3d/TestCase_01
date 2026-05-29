@@ -26,7 +26,7 @@ namespace TestCase_01.Controllers
         [HttpPost("create")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> CreateTestCase([FromBody] TestCaseDTO testCaseDto, [FromQuery] long projectId, [FromQuery] long requirementId)
+        public async Task<IActionResult> CreateTestCase([FromBody] TestCaseRequestDTO testCaseRequestDto)
         {
             try
             {
@@ -38,7 +38,7 @@ namespace TestCase_01.Controllers
                     return BadRequest(_response);
                 }
 
-                await _testCaseService.CreateTestCaseAsync(testCaseDto, projectId, requirementId);
+                await _testCaseService.CreateTestCaseAsync(testCaseRequestDto);
 
                 _response.StatusCode = HttpStatusCode.Created;
                 _response.IsSuccess = true;
@@ -148,7 +148,34 @@ namespace TestCase_01.Controllers
             }
         }
 
-       
+        [HttpDelete("delete-testcase/{testcaseid}")]
+        public async Task<IActionResult> DeleteTestCase(long testcaseid)
+        {
+            try
+            {
+                if (testcaseid <= 0)
+                {
+                    _response.StatusCode = HttpStatusCode.BadRequest;
+                    _response.IsSuccess = false;
+                    _response.DescriptiveMessage = "Invalid TestCase ID.";
+                    return BadRequest(_response);
+                }
+
+                await _testCaseService.DeleteByTestCaseAsync(testcaseid);
+
+                _response.StatusCode = HttpStatusCode.OK;
+                _response.IsSuccess = true;
+                _response.DescriptiveMessage = "TestCase deleted successfully (Soft Delete).";
+
+                return Ok(_response);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
+
         private IActionResult HandleException(Exception ex)
         {
             _response.StatusCode = HttpStatusCode.InternalServerError;

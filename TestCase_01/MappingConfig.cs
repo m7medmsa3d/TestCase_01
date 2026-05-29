@@ -10,7 +10,14 @@ namespace TestCase_01
     {
         public MappingConfig()
         {
-            
+
+            CreateMap<TestCaseRequestDTO, TestCase>()
+    
+            .ForMember(dest => dest.ProjectId, opt => opt.MapFrom(src => src.ProjectId))
+          .ForMember(dest => dest.RequirementId, opt => opt.MapFrom(src => src.RequirementId));
+
+
+
             CreateMap<TestCase, TestCaseDTO>()
                 .ForMember(dest => dest.Steps, opt => opt.MapFrom(src => src.Steps.Select(s => s.Step).ToList()));
 

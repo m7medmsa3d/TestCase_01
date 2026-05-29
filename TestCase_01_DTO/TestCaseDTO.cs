@@ -25,9 +25,10 @@ namespace TestCase_01_DTO
             public List<string> Steps { get; set; } = new List<string>();
 
             [Required(ErrorMessage = "ExpectedResult can not be empty")]
-            [JsonPropertyName("expected_result")] 
-           
-            public string ExpectedResult { get; set; }
-        }
+        [JsonPropertyName("expected_result")]
+
+
+        public string ExpectedResult { get; set; }
+    }
 }
 

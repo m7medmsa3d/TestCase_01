@@ -10,7 +10,7 @@ services:
       MYSQL_ROOT_PASSWORD: Password123!
       MYSQL_DATABASE: TestCaseDb
     ports:
-      - "3306:3306"
+      - "3302:3302"
     volumes:
       - mysql_data:/var/lib/mysql
 
@@ -21,7 +21,7 @@ services:
       context: ..                      
       dockerfile: TestCase_01/Dockerfile 
     ports:
-      - "44376:8080"
+      - "44376:2000"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Server=mysql-db;Port=3306;Database=TestCaseDb;Uid=root;Pwd=Password123!;
