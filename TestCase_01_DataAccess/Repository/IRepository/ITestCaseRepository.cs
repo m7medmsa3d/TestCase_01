@@ -10,6 +10,7 @@ namespace TestCase_01_DataAccess.Repository.IRepository
 {
    public interface ITestCaseRepository : IRepository<TestCase>
     {
+        void Update(TestCase testCase);
 
     }
 }

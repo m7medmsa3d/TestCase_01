@@ -20,11 +20,9 @@ namespace TestCase_01_DataAccess.Entities
         [StringLength(255, ErrorMessage = "Title cannot exceed 255 characters.")]
         public string Title { get; set; }
 
- 
         public List<TestCaseStep> Steps { get; set; } = new List<TestCaseStep>();
 
         [Required(ErrorMessage = "Expected Result is required.")]
-        
         public string ExpectedResult { get; set; }
 
         [Required(ErrorMessage = "Project ID is required.")]
@@ -34,6 +32,14 @@ namespace TestCase_01_DataAccess.Entities
         [Required(ErrorMessage = "Requirement ID is required.")]
         [Range(1, long.MaxValue, ErrorMessage = "Requirement ID must be a positive number greater than 0.")]
         public long RequirementId { get; set; }
+
+        
+        [Required(ErrorMessage = "User ID is required.")]
+        public int UserId { get; set; } 
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime? LastExportedAt { get; set; } 
 
         public bool Deleted { get; set; } = false;
     }
