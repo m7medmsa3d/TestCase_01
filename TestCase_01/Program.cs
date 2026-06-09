@@ -20,15 +20,15 @@ namespace TestCase_01
 
             // Add services to the container.
 
-            //builder.Services.AddDbContext<ApplicationDbContext>(options =>
-            //  options.UseInMemoryDatabase("DefaultInMemoryConnection"));
-
-
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseMySQL(connectionString));
+              options.UseInMemoryDatabase("DefaultInMemoryConnection"));
+
+
+            //var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+
+            //builder.Services.AddDbContext<ApplicationDbContext>(options =>
+            //    options.UseMySQL(connectionString));
 
 
             builder.Services.AddScoped<IUnitofWork, UnitOfWork>();

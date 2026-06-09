@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
-using System.Net;
+using System.Linq;
 using System.Threading.Tasks;
-using TestCase_01_DataAccess;
 using TestCase_01_DataAccess.Service.IService;
 using TestCase_01_DTO;
 
@@ -12,41 +12,67 @@ namespace TestCase_01.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class TestCaseController : ControllerBase
     {
         private readonly ITestCaseService _testCaseService;
-        protected APIResponse _response;
 
         public TestCaseController(ITestCaseService testCaseService)
         {
             _testCaseService = testCaseService;
-            _response = new APIResponse(); 
         }
 
-       
-        [HttpPost("create")]
+        #region 1️⃣ Create
+        [HttpPost("/create")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> CreateTestCase([FromBody] TestCaseRequestDTO testCaseRequestDto)
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> createTestcases([FromBody] TestCaseRequestDTO testCaseRequestDto)
         {
             try
             {
+               
+                if (testCaseRequestDto == null || testCaseRequestDto.UserId == null || testCaseRequestDto.UserId <= 0)
+                {
+                    return BadRequest(new { message = "Invalid or missing UserId inside the request body. It must be greater than 0." });
+                }
+
                 if (!ModelState.IsValid)
                 {
-                    _response.StatusCode = HttpStatusCode.BadRequest;
-                    _response.IsSuccess = false;
-                    _response.DescriptiveMessage = "Validation failed.";
-                    return BadRequest(_response);
+                    return BadRequest(new { message = "Validation failed.", errors = ModelState });
                 }
 
                 await _testCaseService.CreateTestCaseAsync(testCaseRequestDto);
 
-                _response.StatusCode = HttpStatusCode.Created;
-                _response.IsSuccess = true;
-                _response.DescriptiveMessage = "TestCase created successfully.";
+                return CreatedAtAction(nameof(GetTestCaseById), new { testcaseid = 0, userId = testCaseRequestDto.UserId }, new { message = "TestCase batch created successfully." });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+        #endregion
 
-                return CreatedAtAction(nameof(GetTestCaseById), new { testcaseid = 0 }, _response);
+        #region 2️⃣ Get Methods
+        [HttpGet("/testcase/{testcaseid}/{userId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetTestCaseById(long testcaseid, int userId)
+        {
+            try
+            {
+                if (userId <= 0) return BadRequest(new { message = "Invalid or missing userId parameter. It must be greater than 0." });
+                if (testcaseid <= 0) return BadRequest(new { message = "Invalid TestCase ID." });
+
+                var testCaseDto = await _testCaseService.GetTestCaseByIdAsync(testcaseid, userId);
+
+                if (testCaseDto == null)
+                {
+                    return NotFound(new { message = $"TestCase with ID {testcaseid} was not found, or access is denied for this user." });
+                }
+
+                return Ok(testCaseDto);
             }
             catch (Exception ex)
             {
@@ -54,30 +80,155 @@ namespace TestCase_01.Controllers
             }
         }
 
-       
-        [HttpGet("{testcaseid:long}")]
+        [HttpGet("/projects/{projectId}/{userId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetTestCaseById(long testcaseid)
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetTestCasesByProjectId(long projectId,  int userId)
         {
             try
             {
-                var testCaseDto = await _testCaseService.GetTestCaseByIdAsync(testcaseid);
+                if (userId <= 0) return BadRequest(new { message = "Invalid or missing userId parameter. It must be greater than 0." });
+                if (projectId <= 0) return BadRequest(new { message = "Invalid Project ID." });
 
-                _response.StatusCode = HttpStatusCode.OK;
-                _response.IsSuccess = true;
-                _response.DescriptiveMessage = "TestCase retrieved successfully.";
-                _response.Result = testCaseDto;
+                var testCases = await _testCaseService.GetAllByProjectIdAsync(projectId, userId);
 
-                return Ok(_response);
+             
+                if (testCases == null || !testCases.Any())
+                {
+                    return NotFound(new { message = $"Project with ID {projectId} was not found, or it has no test cases associated  or access is denied for this user.." });
+                }
+
+                return Ok(testCases);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
+        [HttpGet("/requirements/{requirementId}/{userId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> getTestcasesByRequirementId(long requirementId,  int userId)
+        {
+            try
+            {
+                if (userId <= 0) return BadRequest(new { message = "Invalid or missing userId parameter. It must be greater than 0." });
+                if (requirementId <= 0) return BadRequest(new { message = "Invalid Requirement ID." });
+
+                var testCases = await _testCaseService.GetAllByRequirementIdAsync(requirementId, userId);
+
+                
+                if (testCases == null || !testCases.Any())
+                {
+                    return NotFound(new { message = $"Requirement with ID {requirementId} was not found, or it has no test cases associated  or access is denied for this user.." });
+                }
+
+                return Ok(testCases);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+        #endregion
+
+        #region 3️⃣ Delete Methods (Soft Delete)
+        [HttpDelete("/requirements/{requirementId}/{userId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteByRequirement(long requirementId, int userId)
+        {
+            try
+            {
+                if (userId <= 0) return BadRequest(new { message = "Invalid or missing userId parameter. It must be greater than 0." });
+                if (requirementId <= 0) return BadRequest(new { message = "Invalid Requirement ID." });
+
+                var existing = await _testCaseService.GetAllByRequirementIdAsync(requirementId, userId);
+                if (existing == null || !existing.Any())
+                {
+                    return NotFound(new { message = $"Cannot delete. Requirement with ID {requirementId} was not found or has no active test cases  or access is denied for this user.." });
+                }
+
+                await _testCaseService.DeleteByRequirementAsync(requirementId, userId);
+                return Ok(new { message = $"All test cases for requirement ID {requirementId} have been successfully soft-deleted." });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
+        [HttpDelete("/testcase/{testcaseid}/{userId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteTestCase(long testcaseid, int userId)
+        {
+            try
+            {
+                if (userId <= 0) return BadRequest(new { message = "Invalid or missing userId parameter. It must be greater than 0." });
+                if (testcaseid <= 0) return BadRequest(new { message = "Invalid TestCase ID." });
+
+                var testCase = await _testCaseService.GetTestCaseByIdAsync(testcaseid, userId);
+                if (testCase == null)
+                {
+                    return NotFound(new { message = $"TestCase with ID {testcaseid} was not found or you don't have permission to delete it  or access is denied for this user.." });
+                }
+
+                await _testCaseService.DeleteByTestCaseAsync(testcaseid, userId);
+                return Ok(new { message = "TestCase deleted successfully (Soft Delete)." });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+        #endregion
+
+        #region 4️⃣ Dashboard Analytics
+        [HttpGet("/internal/users/{userId}/summary")]
+        [ProducesResponseType(typeof(ProfileStatsResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetDashboardStats( int userId)
+        {
+            try
+            {
+                if (userId <= 0) return BadRequest(new { message = "Invalid or missing userId parameter. It must be greater than 0." });
+
+                var stats = await _testCaseService.GetUserSummaryAsync(userId);
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+        #endregion
+
+        #region 5️⃣ Export Engines (Excel, Word, PDF)
+        [HttpGet("/{testcaseId}/{userId}/{format}/export")]
+        public async Task<IActionResult> ExportSingleTestCase(long testcaseId,  int userId,  string format = "pdf")
+        {
+            try
+            {
+                if (userId <= 0) return BadRequest(new { message = "Invalid or missing userId parameter. It must be greater than 0." });
+                if (testcaseId <= 0) return BadRequest(new { message = "Invalid TestCase ID." });
+
+                byte[] fileBytes = await _testCaseService.ExportTestCaseAsync(testcaseId, userId, format);
+                return File(fileBytes, GetContentType(format), $"TestCase_{testcaseId}_{DateTime.UtcNow:yyyyMMdd}.{GetExtension(format)}");
             }
             catch (KeyNotFoundException ex)
             {
-                _response.StatusCode = HttpStatusCode.NotFound;
-                _response.IsSuccess = false;
-                _response.ErrorMessages.Add(ex.Message);
-                _response.DescriptiveMessage = "Resource not found.";
-                return NotFound(_response);
+                return NotFound(new { message = $"Export failed. {ex.Message}" });
             }
             catch (Exception ex)
             {
@@ -85,21 +236,20 @@ namespace TestCase_01.Controllers
             }
         }
 
-        
-        [HttpGet("by-project/{projectId:long}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetTestCasesByProjectId(long projectId)
+        [HttpGet("/requirements/{requirementId}/{userId}/{format}/export")]
+        public async Task<IActionResult> ExportByRequirement(long requirementId,  int userId,  string format = "excel")
         {
             try
             {
-                var testCases = await _testCaseService.GetAllByProjectIdAsync(projectId);
+                if (userId <= 0) return BadRequest(new { message = "Invalid or missing userId parameter. It must be greater than 0." });
+                if (requirementId <= 0) return BadRequest(new { message = "Invalid Requirement ID." });
 
-                _response.StatusCode = HttpStatusCode.OK;
-                _response.IsSuccess = true;
-                _response.DescriptiveMessage = $"Retrieved all test cases for project ID {projectId}.";
-                _response.Result = testCases;
-
-                return Ok(_response);
+                byte[] fileBytes = await _testCaseService.ExportByRequirementAsync(requirementId, userId, format);
+                return File(fileBytes, GetContentType(format), $"Requirement_{requirementId}_TestCases_{DateTime.UtcNow:yyyyMMdd}.{GetExtension(format)}");
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = $"Export failed. {ex.Message}" });
             }
             catch (Exception ex)
             {
@@ -107,85 +257,55 @@ namespace TestCase_01.Controllers
             }
         }
 
-        
-        [HttpGet("by-requirement/{requirementId:long}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetTestCasesByRequirementId(long requirementId)
+        [HttpGet("/projects/{projectId}/{userId}/{format}/export")]
+        public async Task<IActionResult> ExportByProject(long projectId,  int userId, string format = "word")
         {
             try
             {
-                var testCases = await _testCaseService.GetAllByRequirementIdAsync(requirementId);
+                if (userId <= 0) return BadRequest(new { message = "Invalid or missing userId parameter. It must be greater than 0." });
+                if (projectId <= 0) return BadRequest(new { message = "Invalid Project ID." });
 
-                _response.StatusCode = HttpStatusCode.OK;
-                _response.IsSuccess = true;
-                _response.DescriptiveMessage = $"Retrieved all test cases for requirement ID {requirementId}.";
-                _response.Result = testCases;
-
-                return Ok(_response);
+                byte[] fileBytes = await _testCaseService.ExportByProjectAsync(projectId, userId, format);
+                return File(fileBytes, GetContentType(format), $"Project_{projectId}_TestCases_{DateTime.UtcNow:yyyyMMdd}.{GetExtension(format)}");
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = $"Export failed. {ex.Message}" });
             }
             catch (Exception ex)
             {
                 return HandleException(ex);
             }
         }
+        #endregion
 
-       
-        [HttpDelete("by-requirement/{requirementId:long}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> DeleteByRequirement(long requirementId)
+        #region 🧰 Helpers
+        private string GetContentType(string format)
         {
-            try
+            return format.ToLower() switch
             {
-                await _testCaseService.DeleteByRequirementAsync(requirementId);
-
-                _response.StatusCode = HttpStatusCode.OK;
-                _response.IsSuccess = true;
-                _response.DescriptiveMessage = $"All test cases for requirement ID {requirementId} have been soft-deleted.";
-
-                return Ok(_response);
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex);
-            }
+                "excel" or "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "word" or "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "pdf" => "application/pdf",
+                _ => "application/octet-stream"
+            };
         }
 
-        [HttpDelete("delete-testcase/{testcaseid}")]
-        public async Task<IActionResult> DeleteTestCase(long testcaseid)
+        private string GetExtension(string format)
         {
-            try
+            return format.ToLower() switch
             {
-                if (testcaseid <= 0)
-                {
-                    _response.StatusCode = HttpStatusCode.BadRequest;
-                    _response.IsSuccess = false;
-                    _response.DescriptiveMessage = "Invalid TestCase ID.";
-                    return BadRequest(_response);
-                }
-
-                await _testCaseService.DeleteByTestCaseAsync(testcaseid);
-
-                _response.StatusCode = HttpStatusCode.OK;
-                _response.IsSuccess = true;
-                _response.DescriptiveMessage = "TestCase deleted successfully (Soft Delete).";
-
-                return Ok(_response);
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex);
-            }
+                "excel" or "xlsx" => "xlsx",
+                "word" or "docx" => "docx",
+                "pdf" => "pdf",
+                _ => "bin"
+            };
         }
-
 
         private IActionResult HandleException(Exception ex)
         {
-            _response.StatusCode = HttpStatusCode.InternalServerError;
-            _response.IsSuccess = false;
-            _response.DescriptiveMessage = "An unexpected error occurred.";
-            _response.ErrorMessages = new List<string> { ex.Message };
-
-            return StatusCode(StatusCodes.Status500InternalServerError, _response);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An unexpected error occurred on the server.", error = ex.Message });
         }
+        #endregion
     }
 }

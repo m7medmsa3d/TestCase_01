@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,6 +17,14 @@ namespace TestCase_01_DataAccess.Repository
          {
              _db = db;
          }
-    
-   }
+        public void Update(TestCase testCase)
+        {
+          
+            _db.TestCases.Update(testCase);
+
+           
+            _db.Entry(testCase).State = EntityState.Modified;
+        }
+
+    }
 }
