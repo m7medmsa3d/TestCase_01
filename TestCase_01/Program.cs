@@ -20,16 +20,19 @@ namespace TestCase_01
 
             // Add services to the container.
 
-            builder.Services.AddDbContext<ApplicationDbContext>(options =>
-              options.UseInMemoryDatabase("DefaultInMemoryConnection"));
-
-
-            //var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-
             //builder.Services.AddDbContext<ApplicationDbContext>(options =>
-            //    options.UseMySQL(connectionString));
+            //  options.UseInMemoryDatabase("DefaultInMemoryConnection"));
 
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+            
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new InvalidOperationException("Connection string 'DefaultConnection' not found or is empty in configuration.");
+            }
+
+            builder.Services.AddDbContext<ApplicationDbContext>(options =>
+                 options.UseMySQL(connectionString));
 
             builder.Services.AddScoped<IUnitofWork, UnitOfWork>();
 
@@ -50,6 +53,10 @@ namespace TestCase_01
             builder.Services.AddOpenApi();
             builder.Services.AddSwaggerGen();
 
+            builder.Services.AddHealthChecks();
+
+
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -69,6 +76,8 @@ namespace TestCase_01
 
 
             app.MapControllers();
+
+            app.MapHealthChecks("/health");
 
             app.Run();
         }

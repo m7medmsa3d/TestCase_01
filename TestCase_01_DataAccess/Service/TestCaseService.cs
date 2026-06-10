@@ -286,7 +286,7 @@ namespace TestCase_01_DataAccess.Service
             return await ExportManyAsync(testCases, format);
         }
 
-        #region Helper Methods (محركات التصدير وحسابات النسب)
+        #region Helper Methods
 
         private async Task<byte[]> ExportManyAsync(List<TestCase> testCases, string format)
         {
