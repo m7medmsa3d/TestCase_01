@@ -18,6 +18,10 @@ namespace TestCase_01
             var builder = WebApplication.CreateBuilder(args);
 
 
+
+           
+
+
             // Add services to the container.
 
             //builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -26,6 +30,8 @@ namespace TestCase_01
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
             
+
+
             if (string.IsNullOrEmpty(connectionString))
             {
                 throw new InvalidOperationException("Connection string 'DefaultConnection' not found or is empty in configuration.");
@@ -66,7 +72,7 @@ namespace TestCase_01
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
 
             app.UseCors("AllowAll");
 

@@ -10,8 +10,9 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 USER $APP_UID
 WORKDIR /app
+
 EXPOSE 2000
-EXPOSE 9050
+
 
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
