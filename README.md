@@ -97,3 +97,33 @@ Solution 'TestCase_01'
     ├── 📄 ProfileActivityResponse.cs      # User Engagement Logs Schema
     ├── 📄 ProfileStatsResponse.cs         # Aggregate User Activity Metrics
     └── 📄 TestcaseTypeBreakdownResponse.cs# Categorized TestCase Metrics Schema
+
+
+🐳 Docker Deployment & Containerization
+The service is fully containerized using a multi-stage Docker build targeting Linux environments and is hosted publicly on Docker Hub.
+
+Docker Hub Repository: mohamedsaadd/testcase-api
+
+Target OS / Runtime: Linux (Ubuntu-based .NET 9.0 Runtime)
+
+🏥 Automated Container Health Monitoring
+The container includes an embedded Health Check layer using curl. Every 30 seconds, the container internally pings its own /health endpoint on port 2000 to verify structural and database availability.
+
+Interval: 30 seconds | Timeout: 3 seconds | Retries: 3 consecutive failures before marking as Unhealthy.
+
+🏗️ 1. Build Image Locally
+To build the Docker image with any new local modifications, execute from the Solution Level Root (where the .sln resides to ensure a proper global build context):
+
+PowerShell
+docker build -t mohamedsaadd/testcase-api:latest -f TestCase_01/Dockerfile .
+🚀 2. Push Image to Docker Hub (Upstream Update)
+Ensure your authentication token is configured locally (docker login using your Personal Access Token with Read & Write access), then update the upstream repository:
+
+PowerShell
+docker push mohamedsaadd/testcase-api:latest
+📥 3. Remote Pull Configuration
+To deploy or pull the latest verified build into staging, container groups, or orchestration configurations:
+
+PowerShell
+docker pull mohamedsaadd/testcase-api:latest
+
