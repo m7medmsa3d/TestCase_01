@@ -22,7 +22,7 @@ The `TestCase` microservice delivers core functionalities engineered for robustn
 ### 🧠 1. Dynamic TestCase Ingestion (`/create`)
 - **Automated Inter-Service Pipeline:** Systematically consumes pre-generated test case metadata forwarded directly from the primary Java-based processing engine.
 - **Inbound Validation:** Strictly enforces payload structures via decoupled `TestCaseRequestDTO` data contracts.
-- **Optimized for Bulk Actions:** Returns a clean `204 NoContent` status upon success, ensuring seamless compatibility and error-free parsing with the upstream Java service.
+- **Optimized for Bulk Actions:** Returns a clean `201 Created` status upon success, ensuring seamless compatibility and error-free parsing with the upstream Java service.
   
 ### 🔍 2. Multi-Level Relational Filtering & Exporting
 - **Granular Queries:** Implements optimized relational mapping allowing client applications to query test cases down to specific Projects, Requirements, or complete User Summaries.
