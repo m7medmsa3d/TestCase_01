@@ -1,129 +1,370 @@
-# 🚀 TestCase Management Microservice (.NET 9)
+# 🚀 TestCase Management Service
 
-This repository contains the Core **TestCase Generation & Management Service** for the **Test-Case Generator Graduation Project**.
-It handles the complete lifecycle of test cases, from generation logic to multi-level filtering (by Project and Requirement), including custom data-handling rules.
+## 📌 Description
 
----
+**TestCase Management Service** is a dedicated **ASP.NET Core 9 microservice** built to manage the full lifecycle of generated software test cases inside a distributed test-case generation platform.
 
-## 🛠️ Tech Stack & Architecture
+The service receives generated test cases from an external generation engine, stores them in a MySQL database, organizes them by user, project, and requirement, and provides clean API endpoints for retrieval, dashboard summaries, soft deletion, and exporting test cases in multiple formats.
 
-- **Framework:** ASP.NET Core 9.0 (Web API) - *Latest Stable & High-Performance Release*
-- **Database ORM:** Entity Framework Core (MySQL)
-- **Design Patterns:** Repository Pattern, N-Tier Architecture, Data Transfer Objects (DTO) Isolation
-- **Containerization:** Docker with Built-in Health Checks (`curl`) & Docker Hub Integration
-- **API Documentation:** Swagger / OpenAPI Integration / Postman
+It is designed to work as an independent backend service that can be deployed with Docker and integrated with Java/Spring microservices, frontend clients, gateways, and other system components.
 
----
+## 📚 Table of Contents
 
-## ✨ Key Features & Business Logic
+- [🧭 Overview](#overview)
+- [🛠️ Tech Stack](#tech-stack)
+- [🏗️ Architecture](#architecture)
+- [📂 Project Structure](#project-structure)
+- [✨ Main Features](#main-features)
+- [🗄️ Database Schema](#database-schema)
+- [⚙️ Configuration](#configuration)
+- [🔌 API Endpoints](#api-endpoints)
+- [💻 Run Locally](#run-locally)
+- [🧱 Database Migrations](#database-migrations)
+- [🐳 Docker](#docker)
+- [🧩 Docker Compose](#docker-compose)
+- [🔗 Integration With Java/Spring Services](#integration-with-javaspring-services)
 
-The `TestCase` microservice delivers core functionalities engineered for robustness, clean data flow, and high performance:
+## 🧭 Overview
 
-### 🧠 1. Dynamic TestCase Ingestion (`/create`)
-- **Automated Inter-Service Pipeline:** Systematically consumes pre-generated test case metadata forwarded directly from the primary Java-based processing engine.
-- **Inbound Validation:** Strictly enforces payload structures via decoupled `TestCaseRequestDTO` data contracts.
-- **Optimized for Bulk Actions:** Returns a clean `201 Created` status upon success, ensuring seamless compatibility and error-free parsing with the upstream Java service.
-  
-### 🔍 2. Multi-Level Relational Filtering & Exporting
-- **Granular Queries:** Implements optimized relational mapping allowing client applications to query test cases down to specific Projects, Requirements, or complete User Summaries.
-- **Multi-Format Export Engine:** Supports exporting targeted test case suites to multiple formats directly via dedicated download endpoints (e.g., `/{testcaseId}/{userId}/{format}/export`).
+The TestCase Management Service is responsible for receiving generated test cases, saving them in MySQL, and exposing APIs that allow other services or frontend applications to retrieve, delete, summarize, and export test case data.
 
-### 🛡️ 3. Safe Cascade Deletion
-- **Bulk Cleanup Operations:** Provides explicit endpoints to cleanly purge entire suites of test cases tied to a specific requirement or an individual testcase model (`DELETE` verbs).
-- **Data Integrity:** Coordinated through the **Repository Pattern** to maintain consistent database state across connected entity dependencies.
+The service works with three main identifiers:
 
-### 📦 4. Isolated Data Architecture (N-Tier Isolation)
-- **Zero-Leaking Schemas:** Database entities inside `TestCase_01_DataAccess` never leak directly to the client. All communications are strictly gated behind the `TestCase_01_DTO` layer.
+- `userId`
+- `projectId`
+- `requirementId`
 
----
+Each test case belongs to a project, requirement, and user. Each test case can also contain multiple test case steps.
 
-## 🔄 Inter-Service Communication & Data Flow
+## 🛠️ Tech Stack
 
-To ensure high availability and decoupled processing, this service acts as a specialized persistence and lifecycle broker within a distributed orchestration pipeline:
+- ASP.NET Core 9 Web API
+- Entity Framework Core
+- MySQL
+- MySql.EntityFrameworkCore
+- AutoMapper
+- Repository Pattern
+- Service Layer
+- DTO Layer
+- Swagger / OpenAPI
+- Docker
+- Docker Compose
+- Health Checks
 
-1. **Frontend Request Initiation:** The Frontend client triggers the primary generation workflow by directly calling the Java-based microservice.
-2. **Backend Service-to-Service Dispatch:** Upon successfully processing the generation logic, the Java service securely acts as a client, dispatching the complete test case metadata downstream to this `.NET 9` service via an HTTP POST request (`/api/TestCase/create`).
-3. **Context-Bounded Persistence:** This service validates and persists the inbound payload, mapping the test suites directly to their respective `projectId` and `requirementId` inside the MySQL database.
-4. **Decoupled Autonomy:** Once the initial ingestion flow is completed, the Frontend bypasses the Java engine and communicates directly with this `.NET 9` service to execute all subsequent lifecycle actions (such as granular filtering, specific fetching, exporting, and safe purging) via independent endpoints.
+## 🏗️ Architecture
 
----
+The solution is separated into three projects:
 
-## 🛑 API Endpoints (Swagger Specifications)
+- `TestCase_01`: ASP.NET Core Web API project.
+- `TestCase_01_DataAccess`: database entities, DbContext, repositories, migrations, and services.
+- `TestCase_01_DTO`: request and response DTOs used by the API.
 
-### 📥 Ingestion & Creation
-- `POST /api/TestCase/create` - Bulk Ingestion of Test Cases *(Returns 204 No Content)*
-
-### 🔍 Querying & Management
-- `GET /api/TestCase/testcase/{testcaseid}/{userId}` - Fetch specific Test Case details
-- `GET /api/TestCase/projects/{projectId}/{userId}` - Fetch all Test Cases linked to a Project
-- `GET /api/TestCase/requirements/{requirementId}/{userId}` - Fetch all Test Cases linked to a Requirement
-- `GET /api/TestCase/internal/users/{userId}/summary` - Fetch a structural overview/dashboard stats for a user
-
-### 💾 Export Engine
-- `GET /api/TestCase/{testcaseId}/{userId}/{format}/export` - Export a single Test Case
-- `GET /api/TestCase/requirements/{requirementId}/{userId}/{format}/export` - Export full Requirement test suite
-- `GET /api/TestCase/projects/{projectId}/{userId}/{format}/export` - Export full Project test suite
-
-### 🗑️ Deletion / Purging
-- `DELETE /api/TestCase/testcase/{testcaseid}/{userId}` - Delete a specific Test Case
-- `DELETE /api/TestCase/requirements/{requirementId}/{userId}` - Delete an entire suite under a Requirement
-
----
+This separation keeps API controllers, business logic, database access, and external request/response contracts in different layers.
 
 ## 📂 Project Structure
 
-The Solution is structured into three decoupled, clean projects ensuring a strict separation of concerns:
+```text
+TestCase_01/
+  Controllers/
+    TestCaseController.cs
+  Properties/
+    launchSettings.json
+  appsettings.json
+  appsettings.Development.json
+  Dockerfile
+  docker-compose.yml
+  MappingConfig.cs
+  Program.cs
+  TestCase_01.csproj
+  TestCase_01.http
+  TestCase_01.sln
+
+TestCase_01_DataAccess/
+  Data/
+    ApplicationDbContext.cs
+  Entities/
+    APIResponse.cs
+    TestCase.cs
+    TestCaseStep.cs
+  Migrations/
+  Repository/
+    IRepository/
+    Repository.cs
+    TestCaseRepository.cs
+    UnitOfWork.cs
+  Service/
+    IService/
+    TestCaseService.cs
+  TestCase_01_DataAccess.csproj
+
+TestCase_01_DTO/
+  DashboardBreakdownResponse.cs
+  DashboardTrendPointResponse.cs
+  ProfileActivityResponse.cs
+  ProfileStatsResponse.cs
+  TestCaseDTO.cs
+  TestCaseRequestDTO.cs
+  TestCaseResponseDTO.cs
+  TestcaseTypeBreakdownResponse.cs
+  TestCase_01_DTO.csproj
+```
+
+## ✨ Main Features
+
+- Create and persist generated test cases.
+- Store multiple steps for each test case.
+- Retrieve a single test case by testcase ID and user ID.
+- Retrieve all test cases for a project.
+- Retrieve all test cases for a requirement.
+- Soft delete test cases by testcase ID.
+- Soft delete all test cases under a requirement.
+- Return dashboard/profile summary data for a user.
+- Export test cases by testcase, requirement, or project.
+- Provide a `/health` endpoint for container health checks.
+- Run as a Docker container on port `2000`.
+
+## 🗄️ Database Schema
+
+The service uses Entity Framework Core with MySQL.
+
+Main tables:
+
+- `TESTCASE`
+- `test_case_steps`
+
+The `TestCase` entity is mapped to:
 
 ```text
-Solution 'TestCase_01'
-├── 🏢 TestCase_01               # Web API Project (Core)
-│   ├── 📂 Controllers           # API Endpoints & Request Orchestration
-│   ├── 📄 Program.cs            # Service Configurations, Health Checks, DI, & Middlewares
-│   ├── 📄 MappingConfig.cs      # AutoMapper Profiles
-│   └── 🐳 Dockerfile            # Containerization with automated curl health probe
-│
-├── 💾 TestCase_01_DataAccess    # Infrastructure Layer
-│   ├── 📂 Data                  # DbContext Configurations & MySQL Target
-│   ├── 📂 Entities              # Core Database Models (Domain Entities)
-│   ├── 📂 Migrations            # Database Schema Versioning
-│   ├── 📂 Repository            # Data Encapsulation & Query Logic
-│   └── 📂 Service               # Core Business Logic Execution
-│
-└── 📦 TestCase_01_DTO           # Contract Layer (Data Schemas)
-    ├── 📄 TestCaseDTO.cs                  # Main Data Representation Template
-    ├── 📄 TestCaseRequestDTO.cs           # Data Contract for Inbound Requests
-    ├── 📄 DashboardBreakdownResponse.cs   # Metrics Schema for System Breakdown
-    ├── 📄 DashboardTrendPointResponse.cs  # Metrics Schema for System Analytics
-    ├── 📄 ProfileActivityResponse.cs      # User Engagement Logs Schema
-    ├── 📄 ProfileStatsResponse.cs         # Aggregate User Activity Metrics
-    └── 📄 TestcaseTypeBreakdownResponse.cs# Categorized TestCase Metrics Schema
+TESTCASE
+```
 
+The `TestCaseStep` entity is mapped to:
 
-🐳 Docker Deployment & Containerization
-The service is fully containerized using a multi-stage Docker build targeting Linux environments and is hosted publicly on Docker Hub.
+```text
+test_case_steps
+```
 
-Docker Hub Repository: mohamedsaadd/testcase-api
+Important: table names can be case-sensitive on Linux MySQL containers. `TESTCASE`, `TestCase`, and `testcase` may be treated as different table names.
 
-Target OS / Runtime: Linux (Ubuntu-based .NET 9.0 Runtime)
+## ⚙️ Configuration
 
-🏥 Automated Container Health Monitoring
-The container includes an embedded Health Check layer using curl. Every 30 seconds, the container internally pings its own /health endpoint on port 2000 to verify structural and database availability.
+The service reads the database connection string from `ConnectionStrings:DefaultConnection`.
 
-Interval: 30 seconds | Timeout: 3 seconds | Retries: 3 consecutive failures before marking as Unhealthy.
+Example:
 
-🏗️ 1. Build Image Locally
-To build the Docker image with any new local modifications, execute from the Solution Level Root (where the .sln resides to ensure a proper global build context):
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=testcasedb;Port=3306;Database=testcasedb;User=root;Password=root;"
+  }
+}
+```
 
-PowerShell
-docker build -t mohamedsaadd/testcase-api:latest -f TestCase_01/Dockerfile .
-🚀 2. Push Image to Docker Hub (Upstream Update)
-Ensure your authentication token is configured locally (docker login using your Personal Access Token with Read & Write access), then update the upstream repository:
+When running in Docker Compose, it is recommended to pass the connection string through environment variables:
 
-PowerShell
-docker push mohamedsaadd/testcase-api:latest
-📥 3. Remote Pull Configuration
-To deploy or pull the latest verified build into staging, container groups, or orchestration configurations:
+```yaml
+environment:
+  ASPNETCORE_URLS: http://+:2000
+  ConnectionStrings__DefaultConnection: Server=testcasedb;Port=3306;Database=testcasedb;User=root;Password=root;
+```
 
-PowerShell
-docker pull mohamedsaadd/testcase-api:latest
+Important: inside Docker Compose, containers communicate using the service name and the internal container port. For MySQL, this is usually `3306`, not the host-mapped port.
 
+## 🔌 API Endpoints
+
+The controller uses absolute routes, so the routes are mounted directly from the root path.
+
+### 🏥 Health
+
+```http
+GET /health
+```
+
+### 📥 Create Test Cases
+
+```http
+POST /create
+```
+
+Creates a batch of test cases.
+
+Example request body:
+
+```json
+{
+  "requirementId": 1,
+  "projectId": 1,
+  "userId": 5,
+  "testcases": [
+    {
+      "type": "Functional",
+      "title": "User can login with valid credentials",
+      "steps": [
+        "Open login page",
+        "Enter valid email and password",
+        "Click login"
+      ],
+      "expectedResult": "User is redirected to the dashboard"
+    }
+  ]
+}
+```
+
+### 🔍 Query Endpoints
+
+```http
+GET /testcase/{testcaseid}/{userId}
+GET /projects/{projectId}/{userId}
+GET /requirements/{requirementId}/{userId}
+GET /internal/users/{userId}/summary
+```
+
+### 🗑️ Delete Endpoints
+
+```http
+DELETE /testcase/{testcaseid}/{userId}
+DELETE /requirements/{requirementId}/{userId}
+```
+
+The delete behavior is soft delete.
+
+### 📤 Export Endpoints
+
+```http
+GET /{testcaseId}/{userId}/{format}/export
+GET /requirements/{requirementId}/{userId}/{format}/export
+GET /projects/{projectId}/{userId}/{format}/export
+```
+
+Supported format values:
+
+- `excel`
+- `xlsx`
+- `word`
+- `docx`
+- `pdf`
+
+## 💻 Run Locally
+
+Prerequisites:
+
+- .NET 9 SDK
+- MySQL
+- EF Core CLI tools
+
+Install EF Core tools if needed:
+
+```bash
+dotnet tool install --global dotnet-ef
+```
+
+Restore dependencies:
+
+```bash
+dotnet restore
+```
+
+Run the API:
+
+```bash
+dotnet run --project TestCase_01/TestCase_01.csproj
+```
+
+The service listens on:
+
+```text
+http://localhost:2000
+```
+
+Test the health endpoint:
+
+```bash
+curl http://localhost:2000/health
+```
+
+## 🧱 Database Migrations
+
+Apply existing migrations:
+
+```bash
+dotnet ef database update --project TestCase_01_DataAccess --startup-project TestCase_01
+```
+
+Create a new migration:
+
+```bash
+dotnet ef migrations add InitialCreate --project TestCase_01_DataAccess --startup-project TestCase_01
+```
+
+Apply the migration:
+
+```bash
+dotnet ef database update --project TestCase_01_DataAccess --startup-project TestCase_01
+```
+
+If the service is deployed in Docker, make sure the database schema is created before using the API endpoints, or enable automatic migrations during startup.
+
+Example startup migration code after `var app = builder.Build();`:
+
+```csharp
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
+```
+
+This requires migrations to already exist in the project.
+
+## 🐳 Docker
+
+Build the image from the repository root:
+
+```bash
+docker build -t mohamedsaadd/testcase01-service:latest -f TestCase_01/Dockerfile .
+```
+
+Run the image:
+
+```bash
+docker run --rm -p 2000:2000 mohamedsaadd/testcase01-service:latest
+```
+
+Run with a connection string:
+
+```bash
+docker run --rm -p 2000:2000 \
+  -e ASPNETCORE_URLS=http://+:2000 \
+  -e ConnectionStrings__DefaultConnection="Server=host.docker.internal;Port=3306;Database=testcasedb;User=root;Password=root;" \
+  mohamedsaadd/testcase01-service:latest
+```
+
+Push to Docker Hub:
+
+```bash
+docker login
+docker push mohamedsaadd/testcase01-service:latest
+```
+
+Pull from Docker Hub:
+
+```bash
+docker pull mohamedsaadd/testcase01-service:latest
+```
+
+## 🔗 Integration With Java/Spring Services
+
+If a Java/Spring service runs in the same Docker Compose network, it should call this .NET API using the Docker Compose service name:
+
+```text
+http://testcase-api:2000
+```
+
+Do not use `localhost` between containers. Inside a container, `localhost` refers to the same container, not another service.
+
+## 📝 Notes
+
+- The API should listen on port `2000`.
+- The MySQL database must exist before applying migrations.
+- The database schema must contain `TESTCASE` and `test_case_steps`.
+- The service is designed to be called by other services in a microservices environment.
